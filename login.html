@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Login Page</title>
+    <title>ChemStudy - Login</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="login-container">
+        <h1>ChemStudy</h1>
         <h2>Login</h2>
         <form id="loginForm">
             <div class="form-group">
@@ -30,13 +31,20 @@
             const messageDiv = document.getElementById('message');
             
             // Simple validation (you can replace this with actual authentication)
-            if (username === 'admin' && password === 'password') {
-                messageDiv.textContent = 'Login successful!';
+            if (username && password) {
+                // Store login status in localStorage
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('username', username);
+                
+                messageDiv.textContent = 'Login successful! Redirecting...';
                 messageDiv.style.color = 'black';
-                // Redirect or do something after successful login
-                // window.location.href = 'dashboard.html';
+                
+                // Redirect to quiz page after successful login
+                setTimeout(() => {
+                    window.location.href = 'quiz.html';
+                }, 1000);
             } else {
-                messageDiv.textContent = 'Invalid username or password';
+                messageDiv.textContent = 'Please enter username and password';
                 messageDiv.style.color = 'black';
             }
         });

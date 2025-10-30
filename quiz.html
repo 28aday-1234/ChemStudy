@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemStudy - Chemistry Quiz</title>
+    <link rel="stylesheet" href="quiz-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1>ChemStudy</h1>
+                <p class="subtitle">Master Chemistry Concepts Through Interactive Quizzes</p>
+            </div>
+            <div class="user-info">
+                <span id="welcomeUser"></span>
+                <button onclick="logout()" class="logout-btn">Logout</button>
+            </div>
+        </div>
+        
+        <!-- Setup Form -->
+        <div id="setupForm" class="setup-form">
+            <div class="form-group">
+                <label for="topic">Select a Chemistry Topic:</label>
+                <select id="topic" required>
+                    <option value="">-- Choose a Topic --</option>
+                    <option value="electron-orbitals">Electron Orbitals & Configurations</option>
+                    <option value="neon">Neon Element Study</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="questionCount">How many questions?</label>
+                <input type="number" id="questionCount" min="1" max="20" value="5" required>
+            </div>
+            <button onclick="startQuiz()">Start Quiz</button>
+        </div>
+
+        <!-- Quiz Container -->
+        <div id="quizContainer" class="quiz-container hidden">
+            <div class="quiz-header">
+                <h2 id="quizTopic"></h2>
+                <div class="progress">
+                    <span id="currentQuestion">1</span> / <span id="totalQuestions">5</span>
+                </div>
+            </div>
+            
+            <div id="questionContainer" class="question-container">
+                <h3 id="questionText"></h3>
+                <div id="answersContainer" class="answers-container"></div>
+            </div>
+            
+            <div class="quiz-actions">
+                <button id="nextBtn" onclick="nextQuestion()" class="hidden">Next Question</button>
+            </div>
+        </div>
+
+        <!-- Results Container -->
+        <div id="resultsContainer" class="results-container hidden">
+            <h2>Quiz Complete! </h2>
+            <div class="score-display">
+                <p>Your Score:</p>
+                <h1 id="finalScore"></h1>
+            </div>
+            <button onclick="resetQuiz()">Take Another Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        window.onload = function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                // Redirect to login page if not logged in
+                window.location.href = 'login.html';
+            } else {
+                // Display username
+                const username = localStorage.getItem('username');
+                document.getElementById('welcomeUser').textContent = `Welcome, ${username}!`;
+            }
+        };
+
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = [];
+        let userAnswers = [];
+
+        // Chemistry question database by topic
+        const questionDatabase = {
+            "electron-orbitals": [
+                { q: "Which element has the electron configuration: 1s²?", answers: ["Hydrogen", "Helium", "Lithium", "Beryllium"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s²?", answers: ["Lithium", "Beryllium", "Boron", "Carbon"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶?", answers: ["Oxygen", "Fluorine", "Neon", "Sodium"], correct: 2 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s¹?", answers: ["Neon", "Sodium", "Magnesium", "Aluminum"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s²?", answers: ["Sodium", "Magnesium", "Aluminum", "Silicon"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s² 3p¹?", answers: ["Magnesium", "Aluminum", "Silicon", "Phosphorus"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p¹?", answers: ["Lithium", "Beryllium", "Boron", "Carbon"], correct: 2 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p²?", answers: ["Boron", "Carbon", "Nitrogen", "Oxygen"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p³?", answers: ["Carbon", "Nitrogen", "Oxygen", "Fluorine"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁴?", answers: ["Nitrogen", "Oxygen", "Fluorine", "Neon"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁵?", answers: ["Oxygen", "Fluorine", "Neon", "Sodium"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s¹?", answers: ["Helium", "Lithium", "Beryllium", "Boron"], correct: 1 },
+                { q: "Which element has the electron configuration: [Ne] 3s² 3p²?", answers: ["Aluminum", "Silicon", "Phosphorus", "Sulfur"], correct: 1 },
+                { q: "Which element has the electron configuration: [Ne] 3s² 3p⁴?", answers: ["Silicon", "Phosphorus", "Sulfur", "Chlorine"], correct: 2 },
+                { q: "Which element has the electron configuration: [Ne] 3s² 3p⁶?", answers: ["Phosphorus", "Sulfur", "Chlorine", "Argon"], correct: 3 },
+                { q: "Which element has the electron configuration: [Ar] 4s¹?", answers: ["Argon", "Potassium", "Calcium", "Scandium"], correct: 1 },
+                { q: "Which element has the electron configuration: [Ar] 4s²?", answers: ["Potassium", "Calcium", "Scandium", "Titanium"], correct: 1 },
+                { q: "How many electrons can the 2p orbital hold?", answers: ["2", "6", "10", "14"], correct: 1 },
+                { q: "How many electrons can the 3d orbital hold?", answers: ["2", "6", "10", "14"], correct: 2 },
+                { q: "What is the maximum number of electrons in the n=2 shell?", answers: ["2", "8", "18", "32"], correct: 1 }
+            ],
+            "neon": [
+                { q: "What is the atomic number of Neon?", answers: ["8", "9", "10", "11"], correct: 2 },
+                { q: "What is the chemical symbol for Neon?", answers: ["N", "Ne", "No", "Nn"], correct: 1 },
+                { q: "What group is Neon in on the periodic table?", answers: ["Group 1", "Group 2", "Group 17", "Group 18"], correct: 3 },
+                { q: "What is the electron configuration of Neon?", answers: ["1s² 2s² 2p⁶", "1s² 2s² 2p⁴", "1s² 2s² 2p⁵", "1s² 2s²"], correct: 0 },
+                { q: "What category of elements does Neon belong to?", answers: ["Alkali metals", "Halogens", "Noble gases", "Transition metals"], correct: 2 },
+                { q: "How many valence electrons does Neon have?", answers: ["2", "6", "8", "10"], correct: 2 },
+                { q: "What is the state of Neon at room temperature?", answers: ["Solid", "Liquid", "Gas", "Plasma"], correct: 2 },
+                { q: "Is Neon reactive?", answers: ["Highly reactive", "Moderately reactive", "Slightly reactive", "Not reactive"], correct: 3 },
+                { q: "What color does Neon glow when electrified?", answers: ["Blue", "Red-orange", "Green", "Yellow"], correct: 1 },
+                { q: "How many protons does Neon have?", answers: ["8", "10", "12", "18"], correct: 1 },
+                { q: "How many electrons does Neon have?", answers: ["8", "10", "12", "18"], correct: 1 },
+                { q: "What is the atomic mass of Neon (approximately)?", answers: ["10", "16", "20", "24"], correct: 2 },
+                { q: "Is Neon's outer electron shell full?", answers: ["Yes", "No", "Sometimes", "Unknown"], correct: 0 },
+                { q: "What makes Neon stable?", answers: ["Full outer shell", "One valence electron", "Seven valence electrons", "Empty outer shell"], correct: 0 },
+                { q: "Where is Neon found naturally?", answers: ["In water", "In rocks", "In the atmosphere", "In soil"], correct: 2 },
+                { q: "What percentage of Earth's atmosphere is Neon?", answers: ["About 0.0018%", "About 1%", "About 10%", "About 20%"], correct: 0 },
+                { q: "What is the most common isotope of Neon?", answers: ["Ne-18", "Ne-20", "Ne-22", "Ne-24"], correct: 1 },
+                { q: "Can Neon form compounds easily?", answers: ["Yes, easily", "Yes, but rarely", "No", "Only with metals"], correct: 2 },
+                { q: "What is Neon primarily used for?", answers: ["Medicine", "Lighting/signs", "Fuel", "Food preservation"], correct: 1 },
+                { q: "Who discovered Neon?", answers: ["Marie Curie", "William Ramsay", "Dmitri Mendeleev", "Albert Einstein"], correct: 1 }
+            ]
+        };
+
+        function startQuiz() {
+            const topic = document.getElementById('topic').value;
+            const count = parseInt(document.getElementById('questionCount').value);
+            
+            if (!topic) {
+                alert('Please select a chemistry topic!');
+                return;
+            }
+
+            if (count < 1 || count > 20) {
+                alert('Please enter a number between 1 and 20!');
+                return;
+            }
+
+            // Generate questions
+            questions = generateQuestions(topic, count);
+            
+            // Hide setup form, show quiz
+            document.getElementById('setupForm').classList.add('hidden');
+            document.getElementById('quizContainer').classList.remove('hidden');
+            
+            // Update header with topic name
+            const topicNames = {
+                'electron-orbitals': 'Electron Orbitals & Configurations',
+                'neon': 'Neon Element Study'
+            };
+            document.getElementById('quizTopic').textContent = topicNames[topic] + ' Quiz';
+            document.getElementById('totalQuestions').textContent = count;
+            
+            // Reset state
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+            
+            // Load first question
+            loadQuestion();
+        }
+
+        function generateQuestions(topic, count) {
+            let topicQuestions = questionDatabase[topic];
+            
+            // Shuffle questions for variety
+            let shuffled = [...topicQuestions].sort(() => 0.5 - Math.random());
+            
+            // Select the number of questions requested
+            let selectedQuestions = [];
+            for (let i = 0; i < count; i++) {
+                selectedQuestions.push(shuffled[i % shuffled.length]);
+            }
+            
+            return selectedQuestions;
+        }
+
+        function loadQuestion() {
+            const question = questions[currentQuestionIndex];
+            
+            // Update progress
+            document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+            
+            // Display question
+            document.getElementById('questionText').textContent = question.q;
+            
+            // Display answers
+            const answersContainer = document.getElementById('answersContainer');
+            answersContainer.innerHTML = '';
+            
+            question.answers.forEach((answer, index) => {
+                const button = document.createElement('button');
+                button.className = 'answer-btn';
+                button.textContent = answer;
+                button.onclick = () => selectAnswer(index);
+                answersContainer.appendChild(button);
+            });
+            
+            // Hide next button
+            document.getElementById('nextBtn').classList.add('hidden');
+        }
+
+        function selectAnswer(selectedIndex) {
+            const question = questions[currentQuestionIndex];
+            const answerButtons = document.querySelectorAll('.answer-btn');
+            
+            // Disable all buttons
+            answerButtons.forEach((btn, index) => {
+                btn.disabled = true;
+                if (index === question.correct) {
+                    btn.classList.add('correct');
+                } else if (index === selectedIndex) {
+                    btn.classList.add('wrong');
+                }
+            });
+            
+            // Check if answer is correct
+            if (selectedIndex === question.correct) {
+                score++;
+            }
+            
+            userAnswers.push(selectedIndex);
+            
+            // Show next button
+            document.getElementById('nextBtn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quizContainer').classList.add('hidden');
+            document.getElementById('resultsContainer').classList.remove('hidden');
+            
+            const percentage = Math.round((score / questions.length) * 100);
+            document.getElementById('finalScore').textContent = `${score} / ${questions.length} (${percentage}%)`;
+        }
+
+        function resetQuiz() {
+            document.getElementById('resultsContainer').classList.add('hidden');
+            document.getElementById('setupForm').classList.remove('hidden');
+            document.getElementById('topic').value = '';
+            document.getElementById('questionCount').value = 5;
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+    </script>
+</body>
+</html>
+
