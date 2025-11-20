@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemStudy - Quiz History</title>
+    <link rel="stylesheet" href="history-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1>ChemStudy</h1>
+                <p class="subtitle">Your Quiz History & Progress</p>
+            </div>
+            <div class="user-info">
+                <span id="welcomeUser"></span>
+                <button onclick="goToQuiz()" class="quiz-btn">Take Quiz</button>
+                <button onclick="logout()" class="logout-btn">Logout</button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-container">
+            <h2>Quiz History</h2>
+            <p><strong>Tests Completed:</strong> <span id="totalQuizzes">0</span></p>
+            <p><strong>Overall Score:</strong> <span id="overallScore">0/0</span></p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        let currentUser = null;
+
+        // Check if user is logged in
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                // Redirect to login page if not logged in
+                window.location.href = 'login.html';
+            } else {
+                // Display user email
+                currentUser = user;
+                document.getElementById('welcomeUser').textContent = `Welcome, ${user.email}!`;
+                
+                // Load quiz history
+                loadQuizHistory();
+            }
+        });
+
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error('Logout error:', error);
+            });
+        }
+
+        function goToQuiz() {
+            window.location.href = 'quiz.html';
+        }
+
+        function loadQuizHistory() {
+            if (!currentUser) return;
+
+            db.collection('quizHistory')
+                .where('userId', '==', currentUser.uid)
+                .get()
+                .then((querySnapshot) => {
+                    if (querySnapshot.empty) {
+                        document.getElementById('totalQuizzes').textContent = '0';
+                        document.getElementById('overallScore').textContent = '0/0';
+                        return;
+                    }
+
+                    let totalQuizzes = 0;
+                    let totalScore = 0;
+                    let totalQuestions = 0;
+
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        totalQuizzes++;
+                        totalScore += data.score || 0;
+                        totalQuestions += data.totalQuestions || 0;
+                    });
+
+                    // Update statistics
+                    document.getElementById('totalQuizzes').textContent = totalQuizzes;
+                    document.getElementById('overallScore').textContent = totalScore + '/' + totalQuestions;
+                })
+                .catch((error) => {
+                    console.error('Error loading quiz history:', error);
+                    document.getElementById('totalQuizzes').textContent = 'Error';
+                    document.getElementById('overallScore').textContent = 'Error';
+                });
+        }
+    </script>
+</body>
+</html>
+

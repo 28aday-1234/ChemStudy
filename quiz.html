@@ -15,6 +15,7 @@
             </div>
             <div class="user-info">
                 <span id="welcomeUser"></span>
+                <button onclick="viewHistory()" class="history-btn">View History</button>
                 <button onclick="logout()" class="logout-btn">Logout</button>
             </div>
         </div>
@@ -23,7 +24,7 @@
         <div id="setupForm" class="setup-form">
             <div class="form-group">
                 <label for="topic">Select a Chemistry Topic:</label>
-                <select id="topic" required>
+                <select id="txopic" required>
                     <option value="">-- Choose a Topic --</option>
                     <option value="electron-orbitals">Electron Orbitals & Configurations</option>
                     <option value="neon">Neon Element Study</option>
@@ -66,24 +67,37 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
     <script>
+        let currentUser = null;
+
         // Check if user is logged in
-        window.onload = function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
-            if (!isLoggedIn) {
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
                 // Redirect to login page if not logged in
                 window.location.href = 'login.html';
             } else {
-                // Display username
-                const username = localStorage.getItem('username');
-                document.getElementById('welcomeUser').textContent = `Welcome, ${username}!`;
+                // Display user email
+                currentUser = user;
+                document.getElementById('welcomeUser').textContent = `Welcome, ${user.email}!`;
             }
-        };
+        });
 
         function logout() {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('username');
-            window.location.href = 'login.html';
+            auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error('Logout error:', error);
+            });
+        }
+
+        function viewHistory() {
+            window.location.href = 'history.html';
         }
 
         let currentQuestionIndex = 0;
@@ -94,23 +108,23 @@
         // Chemistry question database by topic
         const questionDatabase = {
             "electron-orbitals": [
-                { q: "Which element has the electron configuration: 1s²?", answers: ["Hydrogen", "Helium", "Lithium", "Beryllium"], correct: 1 },
-                { q: "Which element has the electron configuration: 1s² 2s²?", answers: ["Lithium", "Beryllium", "Boron", "Carbon"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s²?", answers: ["Helium", "Hydrogen", "Lithium", "Beryllium"], correct: 0 },
+                { q: "Which element has the electron configuration: 1s² 2s²?", answers: ["Lithium", "Carbon", "Boron", "Beryllium"], correct: 3 },
                 { q: "Which element has the electron configuration: 1s² 2s² 2p⁶?", answers: ["Oxygen", "Fluorine", "Neon", "Sodium"], correct: 2 },
-                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s¹?", answers: ["Neon", "Sodium", "Magnesium", "Aluminum"], correct: 1 },
-                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s²?", answers: ["Sodium", "Magnesium", "Aluminum", "Silicon"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s¹?", answers: ["Neon", "Sodium", "Magnesium", "Aluminum"], correct: 2 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s²?", answers: ["Sodium", "Berrylium", "Magnesium", "Silicon"], correct: 1 },
                 { q: "Which element has the electron configuration: 1s² 2s² 2p⁶ 3s² 3p¹?", answers: ["Magnesium", "Aluminum", "Silicon", "Phosphorus"], correct: 1 },
                 { q: "Which element has the electron configuration: 1s² 2s² 2p¹?", answers: ["Lithium", "Beryllium", "Boron", "Carbon"], correct: 2 },
-                { q: "Which element has the electron configuration: 1s² 2s² 2p²?", answers: ["Boron", "Carbon", "Nitrogen", "Oxygen"], correct: 1 },
-                { q: "Which element has the electron configuration: 1s² 2s² 2p³?", answers: ["Carbon", "Nitrogen", "Oxygen", "Fluorine"], correct: 1 },
-                { q: "Which element has the electron configuration: 1s² 2s² 2p⁴?", answers: ["Nitrogen", "Oxygen", "Fluorine", "Neon"], correct: 1 },
-                { q: "Which element has the electron configuration: 1s² 2s² 2p⁵?", answers: ["Oxygen", "Fluorine", "Neon", "Sodium"], correct: 1 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p²?", answers: ["Carbon", "Boron", "Nitrogen", "Oxygen"], correct: 0 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p³?", answers: ["Carbon", "Fluorine", "Oxygen", "Nitrogen"], correct: 3 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁴?", answers: ["Nitrogen", "Fluorine", "Oxygen", "Neon"], correct: 2 },
+                { q: "Which element has the electron configuration: 1s² 2s² 2p⁵?", answers: ["Oxygen", "Sodium", "Neon", "Fluorine"], correct: 3 },
                 { q: "Which element has the electron configuration: 1s² 2s¹?", answers: ["Helium", "Lithium", "Beryllium", "Boron"], correct: 1 },
                 { q: "Which element has the electron configuration: [Ne] 3s² 3p²?", answers: ["Aluminum", "Silicon", "Phosphorus", "Sulfur"], correct: 1 },
-                { q: "Which element has the electron configuration: [Ne] 3s² 3p⁴?", answers: ["Silicon", "Phosphorus", "Sulfur", "Chlorine"], correct: 2 },
+                { q: "Which element has the electron configuration: [Ne] 3s² 3p⁴?", answers: ["Silicon", "Phosphorus", "Chlorine", "Sulfur"], correct: 3 },
                 { q: "Which element has the electron configuration: [Ne] 3s² 3p⁶?", answers: ["Phosphorus", "Sulfur", "Chlorine", "Argon"], correct: 3 },
-                { q: "Which element has the electron configuration: [Ar] 4s¹?", answers: ["Argon", "Potassium", "Calcium", "Scandium"], correct: 1 },
-                { q: "Which element has the electron configuration: [Ar] 4s²?", answers: ["Potassium", "Calcium", "Scandium", "Titanium"], correct: 1 },
+                { q: "Which element has the electron configuration: [Ar] 4s¹?", answers: ["Potassium", "Argon", "Calcium", "Scandium"], correct: 0},
+                { q: "Which element has the electron configuration: [Ar] 4s²?", answers: ["Calcium", "Potassium", "Scandium", "Titanium"], correct: 0 },
                 { q: "How many electrons can the 2p orbital hold?", answers: ["2", "6", "10", "14"], correct: 1 },
                 { q: "How many electrons can the 3d orbital hold?", answers: ["2", "6", "10", "14"], correct: 2 },
                 { q: "What is the maximum number of electrons in the n=2 shell?", answers: ["2", "8", "18", "32"], correct: 1 }
@@ -140,7 +154,7 @@
         };
 
         function startQuiz() {
-            const topic = document.getElementById('topic').value;
+            const topic = document.getElementById('txopic').value;
             const count = parseInt(document.getElementById('questionCount').value);
             
             if (!topic) {
@@ -213,7 +227,7 @@
                 answersContainer.appendChild(button);
             });
             
-            // Hide next button
+    
             document.getElementById('nextBtn').classList.add('hidden');
         }
 
@@ -258,12 +272,46 @@
             
             const percentage = Math.round((score / questions.length) * 100);
             document.getElementById('finalScore').textContent = `${score} / ${questions.length} (${percentage}%)`;
+            
+            saveQuizResult(score, questions.length, percentage);
+        }
+
+        function saveQuizResult(score, totalQuestions, percentage) {
+            if (!currentUser) {
+                console.error('No user logged in');
+                return;
+            }
+
+            const topic = document.getElementById('txopic').value;
+            const topicNames = {
+                'electron-orbitals': 'Electron Orbitals & Configurations',
+                'neon': 'Neon Element Study'
+            };
+
+            const quizData = {
+                userId: currentUser.uid,
+                userEmail: currentUser.email,
+                topic: topicNames[topic] || topic,
+                score: score,
+                totalQuestions: totalQuestions,
+                percentage: percentage,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                date: new Date().toISOString()
+            };
+
+            db.collection('quizHistory').add(quizData)
+                .then((docRef) => {
+                    console.log('Quiz result saved with ID:', docRef.id);
+                })
+                .catch((error) => {
+                    console.error('Error saving quiz result:', error);
+                });
         }
 
         function resetQuiz() {
             document.getElementById('resultsContainer').classList.add('hidden');
             document.getElementById('setupForm').classList.remove('hidden');
-            document.getElementById('topic').value = '';
+            document.getElementById('txopic').value = '';
             document.getElementById('questionCount').value = 5;
         }
 

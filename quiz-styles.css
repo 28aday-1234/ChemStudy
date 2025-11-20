@@ -43,7 +43,7 @@ body {
     font-weight: bold;
 }
 
-.logout-btn {
+.logout-btn, .history-btn {
     width: auto;
     padding: 8px 16px;
     background-color: white;
@@ -53,7 +53,7 @@ body {
     margin: 0;
 }
 
-.logout-btn:hover {
+.logout-btn:hover, .history-btn:hover {
     background-color: black;
     color: white;
 }
