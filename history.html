@@ -5,26 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChemStudy - Quiz History</title>
     <link rel="stylesheet" href="history-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <div class="header-bar">
-            <div>
-                <h1>ChemStudy</h1>
-                <p class="subtitle">Your Quiz History & Progress</p>
-            </div>
-            <div class="user-info">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo" style="text-decoration: none;">
+                <span class="logo-icon">⚗️</span>
+                <span class="logo-text">ChemStudy</span>
+            </a>
+            <div class="nav-links">
                 <span id="welcomeUser"></span>
-                <button onclick="goToQuiz()" class="quiz-btn">Take Quiz</button>
-                <button onclick="logout()" class="logout-btn">Logout</button>
+                <a href="quiz.html">Take Quiz</a>
+                <a href="leaderboard.html">Leaderboard</a>
+                <a href="#" onclick="logout(); return false;" style="color: #ef4444;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>📊 Your Quiz History</h1>
+            <p>Track your progress and see how you've improved over time</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalQuizzes">0</div>
+                    <div class="stat-label">Quizzes Taken</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="averageScore">0%</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalPoints">0</div>
+                    <div class="stat-label">Total Points</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="bestScore">0%</div>
+                    <div class="stat-label">Best Score</div>
+                </div>
             </div>
         </div>
 
-        <!-- Stats -->
-        <div class="stats-container">
-            <h2>Quiz History</h2>
-            <p><strong>Tests Completed:</strong> <span id="totalQuizzes">0</span></p>
-            <p><strong>Overall Score:</strong> <span id="overallScore">0/0</span></p>
+        <!-- History List -->
+        <div class="history-container">
+            <h2>Recent Quizzes</h2>
+            <div id="historyList" class="history-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading your history...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state hidden">
+            <div class="empty-icon">📚</div>
+            <h3>No Quiz History Yet</h3>
+            <p>Take your first quiz to start tracking your progress!</p>
+            <a href="quiz.html" class="btn btn-primary">Take Your First Quiz</a>
         </div>
     </div>
 
@@ -40,14 +95,11 @@
         // Check if user is logged in
         auth.onAuthStateChanged((user) => {
             if (!user) {
-                // Redirect to login page if not logged in
                 window.location.href = 'login.html';
             } else {
-                // Display user email
                 currentUser = user;
-                document.getElementById('welcomeUser').textContent = `Welcome, ${user.email}!`;
-                
-                // Load quiz history
+                const displayName = user.email.split('@')[0];
+                document.getElementById('welcomeUser').textContent = `👤 ${displayName}`;
                 loadQuizHistory();
             }
         });
@@ -60,43 +112,98 @@
             });
         }
 
-        function goToQuiz() {
-            window.location.href = 'quiz.html';
-        }
-
         function loadQuizHistory() {
             if (!currentUser) return;
 
+            const historyList = document.getElementById('historyList');
+            const emptyState = document.getElementById('emptyState');
+
             db.collection('quizHistory')
                 .where('userId', '==', currentUser.uid)
+                .orderBy('timestamp', 'desc')
                 .get()
                 .then((querySnapshot) => {
                     if (querySnapshot.empty) {
-                        document.getElementById('totalQuizzes').textContent = '0';
-                        document.getElementById('overallScore').textContent = '0/0';
+                        historyList.style.display = 'none';
+                        emptyState.classList.remove('hidden');
                         return;
                     }
 
                     let totalQuizzes = 0;
                     let totalScore = 0;
                     let totalQuestions = 0;
+                    let bestScore = 0;
+                    const quizzes = [];
 
                     querySnapshot.forEach((doc) => {
                         const data = doc.data();
                         totalQuizzes++;
                         totalScore += data.score || 0;
                         totalQuestions += data.totalQuestions || 0;
+                        bestScore = Math.max(bestScore, data.percentage || 0);
+                        quizzes.push(data);
                     });
 
                     // Update statistics
+                    const averageScore = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+                    
                     document.getElementById('totalQuizzes').textContent = totalQuizzes;
-                    document.getElementById('overallScore').textContent = totalScore + '/' + totalQuestions;
+                    document.getElementById('averageScore').textContent = averageScore + '%';
+                    document.getElementById('totalPoints').textContent = totalScore;
+                    document.getElementById('bestScore').textContent = bestScore + '%';
+
+                    // Display quiz history
+                    historyList.innerHTML = '';
+                    quizzes.forEach((quiz) => {
+                        const item = createHistoryItem(quiz);
+                        historyList.appendChild(item);
+                    });
                 })
                 .catch((error) => {
                     console.error('Error loading quiz history:', error);
-                    document.getElementById('totalQuizzes').textContent = 'Error';
-                    document.getElementById('overallScore').textContent = 'Error';
+                    historyList.innerHTML = '<div class="error">Error loading history. Please try again.</div>';
                 });
+        }
+
+        function createHistoryItem(quiz) {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            
+            const percentage = quiz.percentage || 0;
+            const scoreClass = percentage >= 80 ? 'excellent' : percentage >= 60 ? 'good' : 'needs-improvement';
+            
+            const date = quiz.timestamp ? formatDate(quiz.timestamp.toDate()) : 'Recently';
+            
+            item.innerHTML = `
+                <div class="history-item-header">
+                    <div class="history-topic">
+                        <span class="topic-icon">⚛️</span>
+                        <span class="topic-name">${quiz.topic}</span>
+                    </div>
+                    <div class="history-date">${date}</div>
+                </div>
+                <div class="history-item-body">
+                    <div class="score-badge ${scoreClass}">${percentage}%</div>
+                    <div class="score-details">
+                        <span>${quiz.score} / ${quiz.totalQuestions} correct</span>
+                    </div>
+                </div>
+            `;
+            
+            return item;
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+            
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
     </script>
 </body>

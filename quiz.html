@@ -5,18 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChemStudy - Chemistry Quiz</title>
     <link rel="stylesheet" href="quiz-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo" style="text-decoration: none;">
+                <span class="logo-icon">⚗️</span>
+                <span class="logo-text">ChemStudy</span>
+            </a>
+            <div class="nav-links">
+                <span id="welcomeUser"></span>
+                <a href="history.html">History</a>
+                <a href="leaderboard.html">Leaderboard</a>
+                <a href="#" onclick="logout(); return false;" style="color: #ef4444;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="header-bar">
             <div>
-                <h1>ChemStudy</h1>
-                <p class="subtitle">Master Chemistry Concepts Through Interactive Quizzes</p>
-            </div>
-            <div class="user-info">
-                <span id="welcomeUser"></span>
-                <button onclick="viewHistory()" class="history-btn">View History</button>
-                <button onclick="logout()" class="logout-btn">Logout</button>
+                <h1>⚗️ Chemistry Quiz</h1>
+                <p class="subtitle">Test your knowledge and improve your chemistry skills</p>
             </div>
         </div>
         
@@ -37,7 +49,7 @@
             <button onclick="startQuiz()">Start Quiz</button>
         </div>
 
-        <!-- Quiz Container -->
+        
         <div id="quizContainer" class="quiz-container hidden">
             <div class="quiz-header">
                 <h2 id="quizTopic"></h2>
@@ -84,7 +96,8 @@
             } else {
                 // Display user email
                 currentUser = user;
-                document.getElementById('welcomeUser').textContent = `Welcome, ${user.email}!`;
+                const displayName = user.email.split('@')[0];
+                document.getElementById('welcomeUser').textContent = `👤 ${displayName}`;
             }
         });
 
@@ -299,6 +312,7 @@
                 date: new Date().toISOString()
             };
 
+            // Save to quiz history
             db.collection('quizHistory').add(quizData)
                 .then((docRef) => {
                     console.log('Quiz result saved with ID:', docRef.id);
@@ -306,6 +320,47 @@
                 .catch((error) => {
                     console.error('Error saving quiz result:', error);
                 });
+
+            // Update leaderboard
+            updateLeaderboard(score, totalQuestions, percentage);
+        }
+
+        function updateLeaderboard(score, totalQuestions, percentage) {
+            const leaderboardRef = db.collection('leaderboard').doc(currentUser.uid);
+            
+            leaderboardRef.get().then((doc) => {
+                if (doc.exists) {
+                    // Update existing entry
+                    const data = doc.data();
+                    const newTotalScore = (data.totalScore || 0) + score;
+                    const newTotalQuestions = (data.totalQuestions || 0) + totalQuestions;
+                    const newQuizzesTaken = (data.quizzesTaken || 0) + 1;
+                    const newAverageScore = Math.round((newTotalScore / newTotalQuestions) * 100);
+
+                    leaderboardRef.update({
+                        totalScore: newTotalScore,
+                        totalQuestions: newTotalQuestions,
+                        quizzesTaken: newQuizzesTaken,
+                        averageScore: newAverageScore,
+                        lastQuizDate: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } else {
+                    // Create new entry
+                    leaderboardRef.set({
+                        userId: currentUser.uid,
+                        userEmail: currentUser.email,
+                        displayName: currentUser.email.split('@')[0],
+                        totalScore: score,
+                        totalQuestions: totalQuestions,
+                        quizzesTaken: 1,
+                        averageScore: percentage,
+                        lastQuizDate: firebase.firestore.FieldValue.serverTimestamp(),
+                        joinedDate: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            }).catch((error) => {
+                console.error('Error updating leaderboard:', error);
+            });
         }
 
         function resetQuiz() {
