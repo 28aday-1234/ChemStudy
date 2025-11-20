@@ -120,7 +120,6 @@
 
             db.collection('quizHistory')
                 .where('userId', '==', currentUser.uid)
-                .orderBy('timestamp', 'desc')
                 .get()
                 .then((querySnapshot) => {
                     if (querySnapshot.empty) {
@@ -142,6 +141,13 @@
                         totalQuestions += data.totalQuestions || 0;
                         bestScore = Math.max(bestScore, data.percentage || 0);
                         quizzes.push(data);
+                    });
+
+                    // Sort by timestamp (most recent first)
+                    quizzes.sort((a, b) => {
+                        const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                        const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                        return timeB - timeA; // Descending order
                     });
 
                     // Update statistics

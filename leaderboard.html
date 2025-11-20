@@ -139,9 +139,6 @@
             const emptyState = document.getElementById('emptyState');
             
             db.collection('leaderboard')
-                .orderBy('averageScore', 'desc')
-                .orderBy('totalScore', 'desc')
-                .limit(100)
                 .get()
                 .then((querySnapshot) => {
                     if (querySnapshot.empty) {
@@ -150,15 +147,34 @@
                         return;
                     }
 
+                    // Collect all data and sort in JavaScript
+                    const leaderboardData = [];
+                    querySnapshot.forEach((doc) => {
+                        leaderboardData.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    // Sort by average score (desc), then by total score (desc)
+                    leaderboardData.sort((a, b) => {
+                        if (b.averageScore !== a.averageScore) {
+                            return b.averageScore - a.averageScore;
+                        }
+                        return b.totalScore - a.totalScore;
+                    });
+
+                    // Limit to top 100
+                    const topPlayers = leaderboardData.slice(0, 100);
+
                     leaderboardBody.innerHTML = '';
                     emptyState.classList.add('hidden');
                     
                     let rank = 1;
                     let userRank = null;
 
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const isCurrentUser = currentUser && doc.id === currentUser.uid;
+                    topPlayers.forEach((data) => {
+                        const isCurrentUser = currentUser && data.id === currentUser.uid;
                         
                         if (isCurrentUser) {
                             userRank = rank;
